@@ -7,7 +7,6 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionListener;
 
 public class PetSelector extends JFrame {
-
     public PetSelector() {
         setTitle("Choose Your Pet");
         setSize(300, 200);
@@ -51,4 +50,3 @@ public class PetSelector extends JFrame {
             frame.setVisible(true);
         });
     }
-}
