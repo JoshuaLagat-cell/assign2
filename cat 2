@@ -1,0 +1,141 @@
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel; // Import DefaultTableModel
+import java.awt.*;
+import java.awt.event.*;
+import java.sql.*;
+
+public class RegistrationForm extends JFrame {
+    // Declare GUI Components
+    JTextField txtName, txtMobile, txtDOB, txtAddress;
+    JRadioButton rbMale, rbFemale;
+    JCheckBox cbTerms;
+    JButton btnSubmit, btnReset;
+    JTable table;
+    DefaultTableModel tableModel;
+    ButtonGroup genderGroup;
+
+    public RegistrationForm() {
+        // Frame setup
+        setTitle("Registration Form");
+        setSize(800, 400);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new GridLayout(1, 2));
+
+        // Left Panel: Form
+        JPanel panelForm = new JPanel(new GridLayout(7, 2, 5, 5));
+        txtName = new JTextField();
+        txtMobile = new JTextField();
+        txtDOB = new JTextField();
+        txtAddress = new JTextField();
+
+        rbMale = new JRadioButton("Male");
+        rbFemale = new JRadioButton("Female");
+        genderGroup = new ButtonGroup();
+        genderGroup.add(rbMale);
+        genderGroup.add(rbFemale);
+
+        cbTerms = new JCheckBox("Accept Terms and Conditions");
+        btnSubmit = new JButton("Submit");
+        btnReset = new JButton("Reset");
+
+        btnSubmit.setEnabled(false);
+        cbTerms.addActionListener(e -> btnSubmit.setEnabled(cbTerms.isSelected()));
+
+        panelForm.add(new JLabel("Name:"));
+        panelForm.add(txtName);
+        panelForm.add(new JLabel("Mobile:"));
+        panelForm.add(txtMobile);
+        panelForm.add(new JLabel("Gender:"));
+        JPanel genderPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        genderPanel.add(rbMale);
+        genderPanel.add(rbFemale);
+        panelForm.add(genderPanel);
+        panelForm.add(new JLabel("DOB:"));
+        panelForm.add(txtDOB);
+        panelForm.add(new JLabel("Address:"));
+        panelForm.add(txtAddress);
+        panelForm.add(cbTerms);
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        btnPanel.add(btnSubmit);
+        btnPanel.add(btnReset);
+        panelForm.add(btnPanel);
+        add(panelForm);
+
+        // Right Panel: Table
+        JPanel panelTable = new JPanel(new BorderLayout());
+        tableModel = new DefaultTableModel(new String[]{"Name", "Mobile", "Gender", "DOB", "Address"}, 0);
+        table = new JTable(tableModel);
+        panelTable.add(new JScrollPane(table), BorderLayout.CENTER);
+        add(panelTable);
+
+        // Button Actions
+        btnSubmit.addActionListener(e -> saveToDatabase());
+        btnReset.addActionListener(e -> clearForm());
+
+        setVisible(true);
+    }
+
+    private void saveToDatabase() {
+        String name = txtName.getText().trim();
+        String mobile = txtMobile.getText().trim();
+        String gender = rbMale.isSelected() ? "Male" : rbFemale.isSelected() ? "Female" : "";
+        String dob = txtDOB.getText().trim();
+        String address = txtAddress.getText().trim();
+
+        if (name.isEmpty() || mobile.isEmpty() || gender.isEmpty() || dob.isEmpty() || address.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please fill all fields", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/registration_db", "root", "password")) {
+            String query = "INSERT INTO registration (name, mobile, gender, dob, address) VALUES (?, ?, ?, ?, ?)";
+            PreparedStatement stmt = conn.prepareStatement(query);
+            stmt.setString(1, name);
+            stmt.setString(2, mobile);
+            stmt.setString(3, gender);
+            stmt.setString(4, dob);
+            stmt.setString(5, address);
+            stmt.executeUpdate();
+
+            JOptionPane.showMessageDialog(this, "Data Saved Successfully");
+            fetchAndDisplayData();
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Database Error", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void fetchAndDisplayData() {
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/registration_db", "root", "password")) {
+            String query = "SELECT name, mobile, gender, dob, address FROM registration";
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(query);
+
+            tableModel.setRowCount(0);
+            while (rs.next()) {
+                tableModel.addRow(new Object[]{
+                        rs.getString("name"),
+                        rs.getString("mobile"),
+                        rs.getString("gender"),
+                        rs.getString("dob"),
+                        rs.getString("address")
+                });
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private void clearForm() {
+        txtName.setText("");
+        txtMobile.setText("");
+        txtDOB.setText("");
+        txtAddress.setText("");
+        genderGroup.clearSelection();
+        cbTerms.setSelected(false);
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(RegistrationForm::new);
+    }
+}
